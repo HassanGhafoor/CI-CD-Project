@@ -28,12 +28,12 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Step 4: Build, Tag, and Push Docker Image to Amazon ECR
+      # Step 4: Build, tag, and push Docker image to Amazon ECR
       - name: Build, tag, and push Docker image
         env:
-          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}  # ECR registry URL (e.g., 816069125679.dkr.ecr.eu-north-1.amazonaws.com)
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}  # ECR repository name (e.g., my-react-app)
+          IMAGE_TAG: ${{ secrets.IMAGE_TAG }}  # Image tag (e.g., latest)
         run: |
           IMAGE=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
           echo "Building Docker image..."
@@ -53,7 +53,7 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
-          container-name: my-react-app
+          container-name: my-react-app  # Ensure the container name matches the one in your task definition
           image: ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}
 
       # Step 7: Deploy to ECS
@@ -61,6 +61,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE_NAME }}
-          cluster: ${{ secrets.CLUSTER_NAME }}
+          service: ${{ secrets.ECS_SERVICE_NAME }}  # ECS service name
+          cluster: ${{ secrets.CLUSTER_NAME }}  # ECS cluster name
           wait-for-service-stability: true
