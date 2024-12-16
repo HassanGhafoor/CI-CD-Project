@@ -14,30 +14,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Set up AWS CLI and Docker
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    # Log into Amazon ECR
-    - name: Login to Amazon ECR
-      uses: aws-actions/amazon-ecr-login@v1
+    # Set up AWS CLI
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v1
       with:
-        region: eu-north-1  # Replace with your region
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-north-1  # Set region here
 
-    # Debugging step to ensure secrets are correctly set
-    - name: Debug Secrets
+    # Log into Amazon ECR using the AWS CLI
+    - name: Login to Amazon ECR
       run: |
-        echo "ECR Registry: ${{ secrets.ECR_REGISTRY }}"
-        echo "ECR Repository: ${{ secrets.ECR_REPOSITORY }}"
-        echo "Image Tag: ${{ secrets.IMAGE_TAG }}"
-        echo "AWS Region: eu-north-1"
-    
+        aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
     # Build the Docker image
     - name: Build Docker image
       run: |
         docker build -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }} .
-    
-    # Debugging step to check if the build was successful
+
+    # Debug Docker Image
     - name: Debug Docker Image
       run: |
         docker images
@@ -47,7 +42,7 @@ jobs:
       run: |
         docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}
 
-    # Debugging step to check if push was successful
+    # Debug Docker Push
     - name: Debug Docker Push
       run: |
         echo "Docker push complete for ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}"
