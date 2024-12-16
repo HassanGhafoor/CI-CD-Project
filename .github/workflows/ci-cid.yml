@@ -1,49 +1,43 @@
-name: Build and Push Docker Image to Amazon ECR
+name: Build and Push Docker Image to ECR
 
 on:
   push:
     branches:
-      - main  # or the branch you want to trigger the pipeline on
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    # Checkout the code from the repository
-    - name: Checkout code
-      uses: actions/checkout@v2
+      # Step 1: Check out the code
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    # Set up AWS CLI
-    - name: Set up AWS CLI
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-north-1  # Set region here
+      # Step 2: Set up AWS credentials
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-north-1
 
-    # Log into Amazon ECR using the AWS CLI
-    - name: Login to Amazon ECR
-      run: |
-        aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+      # Step 3: Log in to Amazon ECR
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          region: eu-north-1
 
-    # Build the Docker image
-    - name: Build Docker image
-      run: |
-        docker build -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }} .
+      # Step 4: Build the Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t my-react-app .
 
-    # Debug Docker Image
-    - name: Debug Docker Image
-      run: |
-        docker images
+      # Step 5: Tag the Docker image
+      - name: Tag Docker image
+        run: |
+          docker tag my-react-app:latest 816069125679.dkr.ecr.eu-north-1.amazonaws.com/my-react-app:latest
 
-    # Push the Docker image to Amazon ECR
-    - name: Push Docker image to ECR
-      run: |
-        docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}
-
-    # Debug Docker Push
-    - name: Debug Docker Push
-      run: |
-        echo "Docker push complete for ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}"
-
+      # Step 6: Push Docker image to ECR
+      - name: Push Docker image to ECR
+        run: |
+          docker push 816069125679.dkr.ecr.eu-north-1.amazonaws.com/my-react-app:latest
