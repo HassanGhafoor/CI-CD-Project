@@ -3,7 +3,7 @@ name: CI/CD Pipeline for React App to ECS
 on:
   push:
     branches:
-      - main  # Trigger the pipeline on code push to 'main' branch
+      - main  # Trigger the pipeline on code push to 'main' branchs
 
 jobs:
   build-and-deploy:
