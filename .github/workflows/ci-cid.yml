@@ -1,4 +1,4 @@
-name: Build and Push Docker Image to ECR
+name: Build and Push Docker Image to ECR and Deploy to ECS
 
 on:
   push:
@@ -27,12 +27,12 @@ jobs:
         with:
           region: eu-north-1
 
-      # Step 4: Build the Docker image
+      # Step 4: Build Docker image
       - name: Build Docker image
         run: |
           docker build -t my-react-app .
 
-      # Step 5: Tag the Docker image
+      # Step 5: Tag Docker image
       - name: Tag Docker image
         run: |
           docker tag my-react-app:latest 816069125679.dkr.ecr.eu-north-1.amazonaws.com/my-react-app:latest
@@ -41,3 +41,12 @@ jobs:
       - name: Push Docker image to ECR
         run: |
           docker push 816069125679.dkr.ecr.eu-north-1.amazonaws.com/my-react-app:latest
+
+      # Step 7: Update ECS service to deploy new image
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster my-ecs-cluster-three \
+            --service my-ecs-service \
+            --force-new-deployment \
+            --region eu-north-1
