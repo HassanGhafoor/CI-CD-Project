@@ -1,66 +1,54 @@
-name: CI/CD Pipeline for React App to ECS
+name: Build and Push Docker Image to Amazon ECR
 
 on:
   push:
     branches:
-      - main  # Trigger the pipeline on code push to 'main' branchs
+      - main  # or the branch you want to trigger the pipeline on
 
 jobs:
-  build-and-deploy:
-    name: Build, Push Docker Image, and Deploy to ECS
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout Code
-      - name: Checkout code
-        uses: actions/checkout@v3
+    # Checkout the code from the repository
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      # Step 2: Configure AWS CLI with GitHub Secrets
-      - name: Configure AWS CLI
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+    # Set up AWS CLI and Docker
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-      # Step 3: Login to Amazon ECR
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+    # Log into Amazon ECR
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v1
+      with:
+        region: eu-north-1  # Replace with your region
 
-      # Step 4: Build, tag, and push Docker image to Amazon ECR
-      - name: Build, tag, and push Docker image
-        env:
-          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}  # ECR registry URL (e.g., 816069125679.dkr.ecr.eu-north-1.amazonaws.com)
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}  # ECR repository name (e.g., my-react-app)
-          IMAGE_TAG: ${{ secrets.IMAGE_TAG }}  # Image tag (e.g., latest)
-        run: |
-          IMAGE=${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
-          echo "Building Docker image..."
-          docker build -t $IMAGE .
-          echo "Pushing Docker image to ECR..."
-          docker push $IMAGE
+    # Debugging step to ensure secrets are correctly set
+    - name: Debug Secrets
+      run: |
+        echo "ECR Registry: ${{ secrets.ECR_REGISTRY }}"
+        echo "ECR Repository: ${{ secrets.ECR_REPOSITORY }}"
+        echo "Image Tag: ${{ secrets.IMAGE_TAG }}"
+        echo "AWS Region: eu-north-1"
+    
+    # Build the Docker image
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }} .
+    
+    # Debugging step to check if the build was successful
+    - name: Debug Docker Image
+      run: |
+        docker images
 
-      # Step 5: Download ECS Task Definition
-      - name: Download Task Definition
-        run: |
-          aws ecs describe-task-definition --task-definition ${{ secrets.TASK_DEFINITION }} \
-          --query taskDefinition > task-definition.json
+    # Push the Docker image to Amazon ECR
+    - name: Push Docker image to ECR
+      run: |
+        docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}
 
-      # Step 6: Update ECS Task Definition with New Image
-      - name: Update task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: my-react-app  # Ensure the container name matches the one in your task definition
-          image: ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}
+    # Debugging step to check if push was successful
+    - name: Debug Docker Push
+      run: |
+        echo "Docker push complete for ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ secrets.IMAGE_TAG }}"
 
-      # Step 7: Deploy to ECS
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE_NAME }}  # ECS service name
-          cluster: ${{ secrets.CLUSTER_NAME }}  # ECS cluster name
-          wait-for-service-stability: true
